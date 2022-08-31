@@ -37,14 +37,14 @@ FAST_PREDICTION=True # use for development only
 # In[3]:
 
 
-TRAIN_IMAGES_PATH = '../input/airbus-ship-detection/train_v2/'
-TEST_IMAGES_PATH = '../input/airbus-ship-detection/test_v2'
+TRAIN_IMAGES_PATH = 'data/airbus-ship-detection/train_v2/'
+TEST_IMAGES_PATH = 'data/airbus-ship-detection/test_v2'
 
 
 # In[4]:
 
 
-MODEL_PATH = "../input/winstars-model-tr/model.h5"
+MODEL_PATH = "model.h5"
 
 
 # In[5]:
@@ -69,14 +69,14 @@ model = load_model(MODEL_PATH,
 
 IMG_SIZE=128
 # Get and resize test images
-sample_submission = pd.read_csv('../input/airbus-ship-detection/sample_submission_v2.csv')
+sample_submission = pd.read_csv('data/airbus-ship-detection/sample_submission_v2.csv')
 test_ids = sample_submission['ImageId'].unique().tolist()
 
 X_test = np.zeros((sample_submission['ImageId'].nunique(), IMG_SIZE, IMG_SIZE, 3), dtype=np.uint8)
 print('Getting and resizing test images ... ')
 
 for n, id_ in tqdm(enumerate(test_ids), total=len(test_ids)):
-    path = f'../input/airbus-ship-detection/test_v2/{id_}'
+    path = f'data/airbus-ship-detection/test_v2/{id_}'
     img = imread(path)[:,:]
     img = resize(img, (IMG_SIZE, IMG_SIZE), mode='constant', preserve_range=True)
     img = np.expand_dims(img, axis = 0)

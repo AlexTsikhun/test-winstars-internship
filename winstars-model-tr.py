@@ -6,6 +6,8 @@
 # In[1]:
 
 
+import os
+import warnings
 import numpy as np
 import pandas as pd
 
@@ -24,20 +26,18 @@ from skimage.io import imread
 from skimage.transform import resize
 from sklearn.model_selection import train_test_split
 
-# Load truncated iamges https://www.kaggle.com/c/airbus-ship-detection/discussion/62574#latest-445141
+# Load truncated iamges
+# https://www.kaggle.com/c/airbus-ship-detection/discussion/62574#latest-445141
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-import warnings
 warnings.filterwarnings('ignore')
-
-import os
 
 
 # In[2]:
 
 
-print(os.listdir("../input/airbus-ship-detection/"))
+# print(os.listdir("../input/airbus-ship-detection/"))
 
 
 # # Constants
@@ -50,25 +50,27 @@ IMG_HEIGHT = 768
 IMG_CHANNELS = 3
 TARGET_WIDTH = 128
 TARGET_HEIGHT = 128
-epochs=10
-batch_size=32
-image_shape=(768, 768)
-FAST_RUN=True # use for development only
-FAST_PREDICTION=True # use for development only
+epochs = 10
+batch_size = 32
+image_shape = (768, 768)
+FAST_RUN = True  # use for development only
+FAST_PREDICTION = True  # use for development only
 
 
 # In[4]:
 
 
-df = pd.read_csv('../input/airbus-ship-detection/train_ship_segmentations_v2.csv')
-df_sub = pd.read_csv('../input/airbus-ship-detection/sample_submission_v2.csv')
+df = pd.read_csv('data/airbus-ship-detection/train_ship_segmentations_v2.csv')
+df_sub = pd.read_csv('data/airbus-ship-detection/sample_submission_v2.csv')
 
 
 # In[5]:
 
 
 # ref: https://www.kaggle.com/paulorzp/run-length-encode-and-decode
-no_mask = np.zeros(image_shape[0]*image_shape[1], dtype=np.uint8)
+no_mask = np.zeros(image_shape[0] * image_shape[1], dtype=np.uint8)
+
+
 def rle_encode(img):
     '''
     img: numpy array, 1 - mask, 0 - background
@@ -81,10 +83,11 @@ def rle_encode(img):
     rle = ' '.join(str(x) for x in runs)
     return rle
 
+
 def rle_decode(mask_rle, shape=image_shape):
     '''
         mask_rle: run-length as string formated (start length)
-    shape: (height,width) of array to return 
+    shape: (height,width) of array to return
     Returns numpy array, 1 - mask, 0 - background
 
     '''
@@ -92,25 +95,28 @@ def rle_decode(mask_rle, shape=image_shape):
         img = no_mask
         return img.reshape(shape).T
     s = mask_rle.split()
-    starts, lengths = [np.asarray(x, dtype=int) for x in (s[0:][::2], s[1:][::2])]
+    starts, lengths = [np.asarray(x, dtype=int)
+                       for x in (s[0:][::2], s[1:][::2])]
 
     starts -= 1
     ends = starts + lengths
-    img = np.zeros(shape[0]*shape[1], dtype=np.uint8)
+    img = np.zeros(shape[0] * shape[1], dtype=np.uint8)
     for lo, hi in zip(starts, ends):
         img[lo:hi] = 1
     return img.reshape(shape).T
 
+
 def dice_coef(y_true, y_pred, smooth=1):
     intersection = K.sum(K.abs(y_true * y_pred), axis=-1)
-    return (2. * intersection + smooth) / (K.sum(K.square(y_true),-1) + K.sum(K.square(y_pred),-1) + smooth)
+    return (2. * intersection + smooth) / \
+        (K.sum(K.square(y_true), -1) + K.sum(K.square(y_pred), -1) + smooth)
 
 
 # In[6]:
 
 
 # Model interface
-inputs = Input((TARGET_WIDTH , TARGET_HEIGHT, IMG_CHANNELS))
+inputs = Input((TARGET_WIDTH, TARGET_HEIGHT, IMG_CHANNELS))
 
 # 128
 
@@ -221,8 +227,8 @@ optimizer = tf.keras.optimizers.RMSprop(1e-4)
 
 
 model.compile(
-    optimizer=optimizer, 
-    loss="binary_crossentropy", 
+    optimizer=optimizer,
+    loss="binary_crossentropy",
     metrics=[dice_coef]
 )
 
@@ -232,10 +238,12 @@ model.compile(
 
 # use for development to run it faster
 if FAST_RUN:
-    df = df.sample(n=1000).reset_index().drop(columns=["index"]) # after reset index dataframe will have one more column call index
-    
+    # after reset index dataframe will have one more column call index
+    df = df.sample(n=1000).reset_index().drop(columns=["index"])
+
 if FAST_PREDICTION:
-    df_sub = df_sub.sample(n=100).reset_index().drop(columns=["index"]) # after reset index dataframe will have one more column call index
+    # after reset index dataframe will have one more column call index
+    df_sub = df_sub.sample(n=100).reset_index().drop(columns=["index"])
 
 
 # # Split data
@@ -244,21 +252,29 @@ if FAST_PREDICTION:
 
 
 train_df, validate_df = train_test_split(df,
-                                        test_size=.2,
-                                        random_state=2022)
+                                         test_size=.2,
+                                         random_state=2022)
 
 
 # In[11]:
 
 
 def get_image(image_name):
-    img = imread('../input/airbus-ship-detection/train_v2/'+image_name)[:,:,:IMG_CHANNELS]
-    img = resize(img, (TARGET_WIDTH, TARGET_HEIGHT), mode='constant', preserve_range=True)
+    img = imread(
+        'data/airbus-ship-detection/train_v2/' +
+        image_name)[
+        :,
+        :,
+        :IMG_CHANNELS]
+    img = resize(img, (TARGET_WIDTH, TARGET_HEIGHT),
+                 mode='constant', preserve_range=True)
     return img
-    
+
+
 def get_mask(code):
     img = rle_decode(code)
-    img = resize(img, (TARGET_WIDTH, TARGET_HEIGHT, 1), mode='constant', preserve_range=True)
+    img = resize(img, (TARGET_WIDTH, TARGET_HEIGHT, 1),
+                 mode='constant', preserve_range=True)
     return img
 
 
@@ -267,7 +283,8 @@ def get_mask(code):
 
 def create_image_generator(precess_batch_size, data_df):
     while True:
-        for k, group_df in data_df.groupby(np.arange(data_df.shape[0])//precess_batch_size):
+        for k, group_df in data_df.groupby(
+                np.arange(data_df.shape[0]) // precess_batch_size):
             imgs = []
             labels = []
             for index, row in group_df.iterrows():
@@ -275,10 +292,10 @@ def create_image_generator(precess_batch_size, data_df):
                 original_img = get_image(row.ImageId) / 255.0
                 # masks
                 mask = get_mask(row.EncodedPixels) / 255.0
-                
+
                 imgs.append(original_img)
                 labels.append(mask)
-                
+
             imgs = np.array(imgs)
             labels = np.array(labels)
             yield imgs, labels
@@ -298,10 +315,10 @@ validate_generator = create_image_generator(batch_size, validate_df)
 
 # Save best model at every epoch
 checkpoint = ModelCheckpoint(
-    'model.h5', 
-    monitor='val_loss', 
-    verbose=0, 
-    save_best_only=True, 
+    'model.h5',
+    monitor='val_loss',
+    verbose=0,
+    save_best_only=True,
     save_weights_only=False,
     mode='auto'
 )
@@ -311,11 +328,14 @@ checkpoint = ModelCheckpoint(
 
 
 # fit model
-train_steps=np.ceil(float(train_df.shape[0]) / float(batch_size)).astype(int)
-validate_steps=np.ceil(float(validate_df.shape[0]) / float(batch_size)).astype(int)
+train_steps = np.ceil(float(train_df.shape[0]) / float(batch_size)).astype(int)
+validate_steps = np.ceil(
+    float(
+        validate_df.shape[0]) /
+    float(batch_size)).astype(int)
 
 history = model.fit_generator(
-    train_generator, 
+    train_generator,
     steps_per_epoch=train_steps,
     validation_data=validate_generator,
     callbacks=[checkpoint],
@@ -328,19 +348,27 @@ history = model.fit_generator(
 
 
 def get_test_image(image_name):
-    img = imread('../input/airbus-ship-detection/test_v2/'+image_name)[:,:,:IMG_CHANNELS]
-    img = resize(img, (TARGET_WIDTH, TARGET_HEIGHT), mode='constant', preserve_range=True)
+    img = imread(
+        'data/airbus-ship-detection/test_v2/' +
+        image_name)[
+        :,
+        :,
+        :IMG_CHANNELS]
+    img = resize(img, (TARGET_WIDTH, TARGET_HEIGHT),
+                 mode='constant', preserve_range=True)
     return img
-    
+
+
 def create_test_generator(precess_batch_size):
     while True:
-        for k, ix in df_sub.groupby(np.arange(df_sub.shape[0])//precess_batch_size):
+        for k, ix in df_sub.groupby(
+                np.arange(df_sub.shape[0]) // precess_batch_size):
             imgs = []
             labels = []
             for index, row in ix.iterrows():
                 original_img = get_test_image(row.ImageId) / 255.0
                 imgs.append(original_img)
-                
+
             imgs = np.array(imgs)
             yield imgs
 
@@ -369,13 +397,17 @@ type(predict_mask)
 # In[20]:
 
 
-fig=plt.figure(figsize=(16, 8))
+fig = plt.figure(figsize=(16, 8))
 for index, row in df_sub.head(20).iterrows():
-    origin_image = imread('../input/airbus-ship-detection/test_v2/'+row.ImageId)
-    predicted_image = resize(predict_mask[index], image_shape).reshape(IMG_WIDTH, IMG_HEIGHT) * 255
-    plt.subplot(10, 4, 2*index+1)
+    origin_image = imread('data/airbus-ship-detection/test_v2/' + row.ImageId)
+    predicted_image = resize(
+        predict_mask[index],
+        image_shape).reshape(
+        IMG_WIDTH,
+        IMG_HEIGHT) * 255
+    plt.subplot(10, 4, 2 * index + 1)
     plt.imshow(origin_image)
-    plt.subplot(10, 4, 2*index+2)
+    plt.subplot(10, 4, 2 * index + 2)
     plt.imshow(predicted_image)
 
 
@@ -389,9 +421,15 @@ predict_mask.shape
 
 
 # PLOT TRAINING
-plt.figure(figsize=(15,5))
-plt.plot(range(history.epoch[-1]+1),history.history['val_dice_coef'],label='Val_dice_coef')
-plt.plot(range(history.epoch[-1]+1),history.history['dice_coef'],label='Trn_dice_coef')
-plt.title('DICE'); plt.xlabel('Epoch'); plt.ylabel('dice_coef');plt.legend(); 
+plt.figure(figsize=(15, 5))
+plt.plot(range(history.epoch[-1] + 1),
+         history.history['val_dice_coef'],
+         label='Val_dice_coef')
+plt.plot(range(history.epoch[-1] + 1),
+         history.history['dice_coef'],
+         label='Trn_dice_coef')
+plt.title('DICE')
+plt.xlabel('Epoch')
+plt.ylabel('dice_coef')
+plt.legend()
 plt.show()
-
