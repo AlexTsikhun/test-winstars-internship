@@ -1,11 +1,6 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# # Import
-
-# In[1]:
-
-
 import os
 import warnings
 import numpy as np
@@ -14,7 +9,6 @@ import pandas as pd
 from matplotlib import pyplot as plt
 import tensorflow as tf
 
-# from keras.preprocessing.image import load_img
 
 import keras.backend as K
 from tensorflow.keras.callbacks import LearningRateScheduler, ModelCheckpoint, EarlyStopping
@@ -26,23 +20,10 @@ from skimage.io import imread
 from skimage.transform import resize
 from sklearn.model_selection import train_test_split
 
-# Load truncated iamges
-# https://www.kaggle.com/c/airbus-ship-detection/discussion/62574#latest-445141
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 warnings.filterwarnings('ignore')
-
-
-# In[2]:
-
-
-# print(os.listdir("../input/airbus-ship-detection/"))
-
-
-# # Constants
-
-# In[3]:
 
 
 IMG_WIDTH = 768
@@ -55,20 +36,6 @@ batch_size = 32
 image_shape = (768, 768)
 FAST_RUN = True  # use for development only
 FAST_PREDICTION = True  # use for development only
-
-
-# In[4]:
-
-
-df = pd.read_csv('data/airbus-ship-detection/train_ship_segmentations_v2.csv')
-df_sub = pd.read_csv('data/airbus-ship-detection/sample_submission_v2.csv')
-
-
-# In[5]:
-
-
-# ref: https://www.kaggle.com/paulorzp/run-length-encode-and-decode
-no_mask = np.zeros(image_shape[0] * image_shape[1], dtype=np.uint8)
 
 
 def rle_encode(img):
@@ -86,7 +53,7 @@ def rle_encode(img):
 
 def rle_decode(mask_rle, shape=image_shape):
     '''
-        mask_rle: run-length as string formated (start length)
+    mask_rle: run-length as string formated (start length)
     shape: (height,width) of array to return
     Returns numpy array, 1 - mask, 0 - background
 
@@ -112,8 +79,78 @@ def dice_coef(y_true, y_pred, smooth=1):
         (K.sum(K.square(y_true), -1) + K.sum(K.square(y_pred), -1) + smooth)
 
 
-# In[6]:
+def get_image(image_name):
+    img = imread(
+        'data/airbus-ship-detection/train_v2/' +
+        image_name)[
+        :,
+        :,
+        :IMG_CHANNELS]
+    img = resize(img, (TARGET_WIDTH, TARGET_HEIGHT),
+                 mode='constant', preserve_range=True)
+    return img
 
+
+def get_mask(code):
+    img = rle_decode(code)
+    img = resize(img, (TARGET_WIDTH, TARGET_HEIGHT, 1),
+                 mode='constant', preserve_range=True)
+    return img
+
+
+def create_image_generator(precess_batch_size, data_df):
+    while True:
+        for k, group_df in data_df.groupby(
+                np.arange(data_df.shape[0]) // precess_batch_size):
+            imgs = []
+            labels = []
+            for index, row in group_df.iterrows():
+                # images
+                original_img = get_image(row.ImageId) / 255.0
+                # masks
+                mask = get_mask(row.EncodedPixels) / 255.0
+
+                imgs.append(original_img)
+                labels.append(mask)
+
+            imgs = np.array(imgs)
+            labels = np.array(labels)
+            yield imgs, labels
+
+
+def get_test_image(image_name):
+    img = imread(
+        'data/airbus-ship-detection/test_v2/' +
+        image_name)[
+        :,
+        :,
+        :IMG_CHANNELS]
+    img = resize(img, (TARGET_WIDTH, TARGET_HEIGHT),
+                 mode='constant', preserve_range=True)
+    return img
+
+
+def create_test_generator(precess_batch_size):
+    while True:
+        for k, ix in df_sub.groupby(
+                np.arange(df_sub.shape[0]) // precess_batch_size):
+            imgs = []
+            labels = []
+            for index, row in ix.iterrows():
+                original_img = get_test_image(row.ImageId) / 255.0
+                imgs.append(original_img)
+
+            imgs = np.array(imgs)
+            yield imgs
+
+
+
+df = pd.read_csv('data/airbus-ship-detection/train_ship_segmentations_v2.csv')
+df_sub = pd.read_csv('data/airbus-ship-detection/sample_submission_v2.csv')
+
+
+# ref: https://www.kaggle.com/paulorzp/run-length-encode-and-decode
+no_mask = np.zeros(image_shape[0] * image_shape[1], dtype=np.uint8)
 
 # Model interface
 inputs = Input((TARGET_WIDTH, TARGET_HEIGHT, IMG_CHANNELS))
@@ -145,7 +182,6 @@ down3 = BatchNormalization()(down3)
 down3 = Activation('relu')(down3)
 down3_pool = MaxPooling2D((2, 2), strides=(2, 2))(down3)
 # 16
-
 down4 = Conv2D(512, (3, 3), padding='same')(down3_pool)
 down4 = BatchNormalization()(down4)
 down4 = Activation('relu')(down4)
@@ -161,7 +197,6 @@ center = Conv2D(1024, (3, 3), padding='same')(center)
 center = BatchNormalization()(center)
 center = Activation('relu')(center)
 # center
-
 up4 = UpSampling2D((2, 2))(center)
 up4 = concatenate([down4, up4], axis=3)
 up4 = Conv2D(512, (3, 3), padding='same')(up4)
@@ -186,7 +221,6 @@ up3 = Conv2D(256, (3, 3), padding='same')(up3)
 up3 = BatchNormalization()(up3)
 up3 = Activation('relu')(up3)
 # 32
-
 up2 = UpSampling2D((2, 2))(up3)
 up2 = concatenate([down2, up2], axis=3)
 up2 = Conv2D(128, (3, 3), padding='same')(up2)
@@ -211,30 +245,17 @@ up1 = Conv2D(64, (3, 3), padding='same')(up1)
 up1 = BatchNormalization()(up1)
 up1 = Activation('relu')(up1)
 # 128
-
 outputs = Conv2D(1, (1, 1), activation='sigmoid')(up1)
 
 model = Model(inputs=inputs, outputs=outputs)
 
-
-# In[7]:
-
-
 optimizer = tf.keras.optimizers.RMSprop(1e-4)
-
-
-# In[8]:
-
 
 model.compile(
     optimizer=optimizer,
     loss="binary_crossentropy",
     metrics=[dice_coef]
 )
-
-
-# In[9]:
-
 
 # use for development to run it faster
 if FAST_RUN:
@@ -247,72 +268,14 @@ if FAST_PREDICTION:
 
 
 # # Split data
-
-# In[10]:
-
-
 train_df, validate_df = train_test_split(df,
                                          test_size=.2,
                                          random_state=2022)
 
-
-# In[11]:
-
-
-def get_image(image_name):
-    img = imread(
-        'data/airbus-ship-detection/train_v2/' +
-        image_name)[
-        :,
-        :,
-        :IMG_CHANNELS]
-    img = resize(img, (TARGET_WIDTH, TARGET_HEIGHT),
-                 mode='constant', preserve_range=True)
-    return img
-
-
-def get_mask(code):
-    img = rle_decode(code)
-    img = resize(img, (TARGET_WIDTH, TARGET_HEIGHT, 1),
-                 mode='constant', preserve_range=True)
-    return img
-
-
-# In[12]:
-
-
-def create_image_generator(precess_batch_size, data_df):
-    while True:
-        for k, group_df in data_df.groupby(
-                np.arange(data_df.shape[0]) // precess_batch_size):
-            imgs = []
-            labels = []
-            for index, row in group_df.iterrows():
-                # images
-                original_img = get_image(row.ImageId) / 255.0
-                # masks
-                mask = get_mask(row.EncodedPixels) / 255.0
-
-                imgs.append(original_img)
-                labels.append(mask)
-
-            imgs = np.array(imgs)
-            labels = np.array(labels)
-            yield imgs, labels
-
-
-# In[13]:
-
-
 train_generator = create_image_generator(batch_size, train_df)
 validate_generator = create_image_generator(batch_size, validate_df)
 
-
 # # Train
-
-# In[14]:
-
-
 # Save best model at every epoch
 checkpoint = ModelCheckpoint(
     'model.h5',
@@ -322,10 +285,6 @@ checkpoint = ModelCheckpoint(
     save_weights_only=False,
     mode='auto'
 )
-
-
-# In[15]:
-
 
 # fit model
 train_steps = np.ceil(float(train_df.shape[0]) / float(batch_size)).astype(int)
@@ -344,57 +303,11 @@ history = model.fit_generator(
 )
 
 
-# In[16]:
-
-
-def get_test_image(image_name):
-    img = imread(
-        'data/airbus-ship-detection/test_v2/' +
-        image_name)[
-        :,
-        :,
-        :IMG_CHANNELS]
-    img = resize(img, (TARGET_WIDTH, TARGET_HEIGHT),
-                 mode='constant', preserve_range=True)
-    return img
-
-
-def create_test_generator(precess_batch_size):
-    while True:
-        for k, ix in df_sub.groupby(
-                np.arange(df_sub.shape[0]) // precess_batch_size):
-            imgs = []
-            labels = []
-            for index, row in ix.iterrows():
-                original_img = get_test_image(row.ImageId) / 255.0
-                imgs.append(original_img)
-
-            imgs = np.array(imgs)
-            yield imgs
-
-
-# In[17]:
-
-
 test_generator = create_test_generator(batch_size)
 
-
 # # Predict
-
-# In[18]:
-
-
 test_steps = np.ceil(float(df_sub.shape[0]) / float(batch_size)).astype(int)
 predict_mask = model.predict_generator(test_generator, steps=test_steps)
-
-
-# In[19]:
-
-
-type(predict_mask)
-
-
-# In[20]:
 
 
 fig = plt.figure(figsize=(16, 8))
@@ -410,15 +323,7 @@ for index, row in df_sub.head(20).iterrows():
     plt.subplot(10, 4, 2 * index + 2)
     plt.imshow(predicted_image)
 
-
-# In[21]:
-
-
 predict_mask.shape
-
-
-# In[22]:
-
 
 # PLOT TRAINING
 plt.figure(figsize=(15, 5))
