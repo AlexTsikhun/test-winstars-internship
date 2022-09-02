@@ -36,6 +36,8 @@ In my work I have shown that I am familiar with CNN and related topics. For bett
 ### Setup
 Features in the data - class imbalance.
 
+### In solution an error was made! Working in progress
+
 ![disb](https://user-images.githubusercontent.com/83775762/187706461-04ffb675-6475-48c7-a8ef-60fb7cc71838.png)
 
 Many photos have duplicates - for better berfomance they can be deleted. Data was split with proportion 80/20 (train/validate)
