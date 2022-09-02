@@ -53,8 +53,8 @@ Picture from my code:
 ![inference](https://user-images.githubusercontent.com/83775762/187712942-69a04698-d9b4-4625-bc3e-7ef96cf8e81b.png)
 ![q](https://user-images.githubusercontent.com/83775762/187740999-a7fd9326-6a1f-4303-b7e8-3cfc99f1ccff.png)
 
-If I would to compare original images with prediction, sometimes I had wrong results...(it'll be fixed)
-![bad](https://user-images.githubusercontent.com/83775762/187737899-47307b6f-19be-484d-9146-3f095172a483.png)
+If I would to compare original images with prediction, sometimes I had wrong results, model working very bad...(it'll be fixed)
+![bad](https://user-images.githubusercontent.com/83775762/188190635-4289599d-ef1a-44f9-bc61-2a93ab6851a4.png)
 
 
 In the conclusion I made simple model witch try to predict ships (in some pics model work very well, shown above). (Want to remember, that dice coef=99%. It's very hight, and I don't confidence in 100% about this res...)
