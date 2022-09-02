@@ -53,7 +53,7 @@ Picture from my code:
 ![inference](https://user-images.githubusercontent.com/83775762/187712942-69a04698-d9b4-4625-bc3e-7ef96cf8e81b.png)
 ![q](https://user-images.githubusercontent.com/83775762/187740999-a7fd9326-6a1f-4303-b7e8-3cfc99f1ccff.png)
 
-If I would to compare original images with prediction, sometimes I had wrong results, model working very bad...(it'll be fixed)
+If I would to compare original images with prediction, sometimes I had wrong results, model working very bad...(it'll be fixed) My classificator can't distinguish the sea and the shore
 ![bad](https://user-images.githubusercontent.com/83775762/188190635-4289599d-ef1a-44f9-bc61-2a93ab6851a4.png)
 
 
