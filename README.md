@@ -14,13 +14,11 @@
 │   ├───winstars_model_inference.ipynb  <- Model inference results
 │   ├───winstars_model_train.ipynb      <- Model training results
 |
-├───winstars-model-inference.py         <- Model inference
-|
-├───winstars-model-tr.py                <- Model training
-|
-├───constants.py                        <- Constant variables
-|
-├───utils.py                            <- Useful and repeated func
+├───src                                 <- Code
+|   ├───winstars-model-inference.py     <- Model inference
+|   ├───winstars-model-tr.py            <- Model training
+|   ├───constants.py                    <- Constant variables
+|   ├───utils.py                        <- Useful and repeated func
 |
 ├───.gitignore                          <- Ignore files
 |
@@ -57,7 +55,7 @@ If I would to compare original images with prediction, sometimes I had wrong res
 
 ![bad](https://user-images.githubusercontent.com/83775762/188190635-4289599d-ef1a-44f9-bc61-2a93ab6851a4.png)
 
-After change epoch (to 99) and training steps (to 50) my NN shows better result!
+After change epoch (to 99) and training steps (to 50) my NN shows better result! (but it took 9 hours...)
 
 ![res_img](https://user-images.githubusercontent.com/83775762/188265259-f6b10136-6501-405b-9983-cf86414f1d5b.png)
 
