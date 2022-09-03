@@ -1,26 +1,30 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+from PIL import ImageFile
+from sklearn.model_selection import train_test_split
+from skimage.transform import resize
+from tensorflow.keras.layers import Input, concatenate, Conv2D, MaxPooling2D, Activation, UpSampling2D, BatchNormalization
+from tensorflow.keras.models import Model
+from tensorflow.keras.callbacks import LearningRateScheduler, ModelCheckpoint, EarlyStopping
+import keras.backend as K
+import tensorflow as tf
+from matplotlib import pyplot as plt
 import os
 import warnings
 import numpy as np
 import pandas as pd
 
-from matplotlib import pyplot as plt
-import tensorflow as tf
-
-
-import keras.backend as K
-from tensorflow.keras.callbacks import LearningRateScheduler, ModelCheckpoint, EarlyStopping
-
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, concatenate, Conv2D, MaxPooling2D, Activation, UpSampling2D, BatchNormalization
-
 from skimage.io import imread
-from skimage.transform import resize
-from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+from matplotlib.cm import get_cmap
+from skimage.segmentation import mark_boundaries
+# from skimage.io import montage2d as montage
+from skimage.morphology import binary_opening, disk, label
+import gc
+gc.enable()  # memory is tight
 
-from PIL import ImageFile
+
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 warnings.filterwarnings('ignore')
@@ -31,29 +35,20 @@ IMG_HEIGHT = 768
 IMG_CHANNELS = 3
 TARGET_WIDTH = 128
 TARGET_HEIGHT = 128
-epochs = 10
 batch_size = 32
 image_shape = (768, 768)
 FAST_RUN = True  # use for development only
 FAST_PREDICTION = True  # use for development only
+MAX_TRAIN_STEPS = 50
+MAX_TRAIN_EPOCHS = 99
 
 
-def rle_encode(img):
-    '''
-    img: numpy array, 1 - mask, 0 - background
-    Returns run length as string formated
-    '''
-    pixels = img.flatten()
-    pixels = np.concatenate([[0], pixels, [0]])
-    runs = np.where(pixels[1:] != pixels[:-1])[0] + 1
-    runs[1::2] -= runs[::2]
-    rle = ' '.join(str(x) for x in runs)
-    return rle
+SAMPLES_PER_GROUP = 2000
 
 
 def rle_decode(mask_rle, shape=image_shape):
     '''
-    mask_rle: run-length as string formated (start length)
+        mask_rle: run-length as string formated (start length)
     shape: (height,width) of array to return
     Returns numpy array, 1 - mask, 0 - background
 
@@ -71,6 +66,30 @@ def rle_decode(mask_rle, shape=image_shape):
     for lo, hi in zip(starts, ends):
         img[lo:hi] = 1
     return img.reshape(shape).T
+
+
+def masks_as_image(in_mask_list):
+    # Take the individual ship masks and create a single mask array for all
+    # ships
+    all_masks = np.zeros((768, 768), dtype=np.uint8)
+    for mask in in_mask_list:
+        if isinstance(mask, str):
+            all_masks |= rle_decode(mask)
+    return all_masks
+
+
+def masks_as_color(in_mask_list):
+    # Take the individual ship masks and create a color mask array for each
+    # ships
+    all_masks = np.zeros((768, 768), dtype=np.float)
+    def scale(x): return (len(in_mask_list) + x + 1) / \
+        (len(in_mask_list) * 2)  # scale the heatmap image to shift
+    for i, mask in enumerate(in_mask_list):
+        if isinstance(mask, str):
+            all_masks[:, :] += scale(i) * rle_decode(mask)
+    return all_masks
+
+####
 
 
 def dice_coef(y_true, y_pred, smooth=1):
@@ -143,14 +162,71 @@ def create_test_generator(precess_batch_size):
             imgs = np.array(imgs)
             yield imgs
 
+######
 
 
-df = pd.read_csv('data/airbus-ship-detection/train_ship_segmentations_v2.csv')
+def montage_rgb(x): return np.stack(
+    [montage(x[:, :, :, i]) for i in range(x.shape[3])], -1)
+
+
+ship_dir = 'data/airbus-ship-detection'
+train_image_dir = os.path.join(ship_dir, 'train_v2')
+test_image_dir = os.path.join(ship_dir, 'test_v2')
+
+
 df_sub = pd.read_csv('data/airbus-ship-detection/sample_submission_v2.csv')
+
+no_mask = np.zeros(image_shape[0] * image_shape[1], dtype=np.uint8)
+
+
+masks = pd.read_csv(
+    os.path.join(
+        'data/airbus-ship-detection/',
+        'train_ship_segmentations_v2.csv'))
+not_empty = pd.notna(masks.EncodedPixels)
+print(
+    not_empty.sum(),
+    'masks in',
+    masks[not_empty].ImageId.nunique(),
+    'images')
+print((~not_empty).sum(), 'empty images in',
+      masks.ImageId.nunique(), 'total images')
+masks.head()
+
+
+masks['ships'] = masks['EncodedPixels'].map(
+    lambda c_row: 1 if isinstance(c_row, str) else 0)
+unique_img_ids = masks.groupby('ImageId').agg({'ships': 'sum'}).reset_index()
+unique_img_ids['has_ship'] = unique_img_ids['ships'].map(
+    lambda x: 1.0 if x > 0 else 0.0)
+unique_img_ids['has_ship_vec'] = unique_img_ids['has_ship'].map(lambda x: [x])
+# some files are too small/corrupt
+unique_img_ids['file_size_kb'] = unique_img_ids['ImageId'].map(
+    lambda c_img_id: os.stat(os.path.join(train_image_dir, c_img_id)).st_size / 1024)
+# keep only +50kb files
+unique_img_ids = unique_img_ids[unique_img_ids['file_size_kb'] > 50]
+unique_img_ids['file_size_kb'].hist()
+masks.drop(['ships'], axis=1, inplace=True)
+unique_img_ids.sample(7)
+
+
+balanced_train_df = unique_img_ids.groupby('ships').apply(
+    lambda x: x.sample(SAMPLES_PER_GROUP) if len(x) > SAMPLES_PER_GROUP else x)
+balanced_train_df['ships'].hist(bins=balanced_train_df['ships'].max() + 1)
+print(balanced_train_df.shape[0], 'masks')
+
+
+train_ids, valid_ids = train_test_split(balanced_train_df,
+                                        test_size=0.2,
+                                        stratify=balanced_train_df['ships'])
+train_df = pd.merge(masks, train_ids)
+valid_df = pd.merge(masks, valid_ids)
+print(train_df.shape[0], 'training masks')
+print(valid_df.shape[0], 'validation masks')
 
 
 # ref: https://www.kaggle.com/paulorzp/run-length-encode-and-decode
-no_mask = np.zeros(image_shape[0] * image_shape[1], dtype=np.uint8)
+# no_mask = np.zeros(image_shape[0] * image_shape[1], dtype=np.uint8)
 
 # Model interface
 inputs = Input((TARGET_WIDTH, TARGET_HEIGHT, IMG_CHANNELS))
@@ -257,23 +333,9 @@ model.compile(
     metrics=[dice_coef]
 )
 
-# use for development to run it faster
-if FAST_RUN:
-    # after reset index dataframe will have one more column call index
-    df = df.sample(n=1000).reset_index().drop(columns=["index"])
-
-if FAST_PREDICTION:
-    # after reset index dataframe will have one more column call index
-    df_sub = df_sub.sample(n=100).reset_index().drop(columns=["index"])
-
-
-# # Split data
-train_df, validate_df = train_test_split(df,
-                                         test_size=.2,
-                                         random_state=2022)
 
 train_generator = create_image_generator(batch_size, train_df)
-validate_generator = create_image_generator(batch_size, validate_df)
+validate_generator = create_image_generator(batch_size, valid_df)
 
 # # Train
 # Save best model at every epoch
@@ -286,12 +348,9 @@ checkpoint = ModelCheckpoint(
     mode='auto'
 )
 
-# fit model
-train_steps = np.ceil(float(train_df.shape[0]) / float(batch_size)).astype(int)
-validate_steps = np.ceil(
-    float(
-        validate_df.shape[0]) /
-    float(batch_size)).astype(int)
+
+train_steps = min(MAX_TRAIN_STEPS, train_df.shape[0] // batch_size)
+validate_steps = min(MAX_TRAIN_STEPS, valid_df.shape[0] // batch_size)
 
 history = model.fit_generator(
     train_generator,
@@ -299,7 +358,7 @@ history = model.fit_generator(
     validation_data=validate_generator,
     callbacks=[checkpoint],
     validation_steps=validate_steps,
-    epochs=epochs
+    epochs=MAX_TRAIN_EPOCHS
 )
 
 
