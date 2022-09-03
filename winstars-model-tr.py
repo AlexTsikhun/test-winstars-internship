@@ -1,6 +1,5 @@
-#!/usr/bin/env python
-# coding: utf-8
-
+from utils import rle_decode, masks_as_image, masks_as_color, dice_coef
+from constants import masks, ship_dir, train_image_dir, test_image_dir, image_shape
 from PIL import ImageFile
 from sklearn.model_selection import train_test_split
 from skimage.transform import resize
@@ -36,66 +35,11 @@ IMG_CHANNELS = 3
 TARGET_WIDTH = 128
 TARGET_HEIGHT = 128
 batch_size = 32
-image_shape = (768, 768)
-FAST_RUN = True  # use for development only
-FAST_PREDICTION = True  # use for development only
+
 MAX_TRAIN_STEPS = 50
 MAX_TRAIN_EPOCHS = 99
 
-
 SAMPLES_PER_GROUP = 2000
-
-
-def rle_decode(mask_rle, shape=image_shape):
-    '''
-        mask_rle: run-length as string formated (start length)
-    shape: (height,width) of array to return
-    Returns numpy array, 1 - mask, 0 - background
-
-    '''
-    if pd.isnull(mask_rle):
-        img = no_mask
-        return img.reshape(shape).T
-    s = mask_rle.split()
-    starts, lengths = [np.asarray(x, dtype=int)
-                       for x in (s[0:][::2], s[1:][::2])]
-
-    starts -= 1
-    ends = starts + lengths
-    img = np.zeros(shape[0] * shape[1], dtype=np.uint8)
-    for lo, hi in zip(starts, ends):
-        img[lo:hi] = 1
-    return img.reshape(shape).T
-
-
-def masks_as_image(in_mask_list):
-    # Take the individual ship masks and create a single mask array for all
-    # ships
-    all_masks = np.zeros((768, 768), dtype=np.uint8)
-    for mask in in_mask_list:
-        if isinstance(mask, str):
-            all_masks |= rle_decode(mask)
-    return all_masks
-
-
-def masks_as_color(in_mask_list):
-    # Take the individual ship masks and create a color mask array for each
-    # ships
-    all_masks = np.zeros((768, 768), dtype=np.float)
-    def scale(x): return (len(in_mask_list) + x + 1) / \
-        (len(in_mask_list) * 2)  # scale the heatmap image to shift
-    for i, mask in enumerate(in_mask_list):
-        if isinstance(mask, str):
-            all_masks[:, :] += scale(i) * rle_decode(mask)
-    return all_masks
-
-####
-
-
-def dice_coef(y_true, y_pred, smooth=1):
-    intersection = K.sum(K.abs(y_true * y_pred), axis=-1)
-    return (2. * intersection + smooth) / \
-        (K.sum(K.square(y_true), -1) + K.sum(K.square(y_pred), -1) + smooth)
 
 
 def get_image(image_name):
@@ -169,20 +113,11 @@ def montage_rgb(x): return np.stack(
     [montage(x[:, :, :, i]) for i in range(x.shape[3])], -1)
 
 
-ship_dir = 'data/airbus-ship-detection'
-train_image_dir = os.path.join(ship_dir, 'train_v2')
-test_image_dir = os.path.join(ship_dir, 'test_v2')
-
-
 df_sub = pd.read_csv('data/airbus-ship-detection/sample_submission_v2.csv')
 
-no_mask = np.zeros(image_shape[0] * image_shape[1], dtype=np.uint8)
 
+# PREPROCESSIN
 
-masks = pd.read_csv(
-    os.path.join(
-        'data/airbus-ship-detection/',
-        'train_ship_segmentations_v2.csv'))
 not_empty = pd.notna(masks.EncodedPixels)
 print(
     not_empty.sum(),
@@ -203,6 +138,7 @@ unique_img_ids['has_ship_vec'] = unique_img_ids['has_ship'].map(lambda x: [x])
 # some files are too small/corrupt
 unique_img_ids['file_size_kb'] = unique_img_ids['ImageId'].map(
     lambda c_img_id: os.stat(os.path.join(train_image_dir, c_img_id)).st_size / 1024)
+
 # keep only +50kb files
 unique_img_ids = unique_img_ids[unique_img_ids['file_size_kb'] > 50]
 unique_img_ids['file_size_kb'].hist()
@@ -210,12 +146,13 @@ masks.drop(['ships'], axis=1, inplace=True)
 unique_img_ids.sample(7)
 
 
+# ships in group
 balanced_train_df = unique_img_ids.groupby('ships').apply(
     lambda x: x.sample(SAMPLES_PER_GROUP) if len(x) > SAMPLES_PER_GROUP else x)
 balanced_train_df['ships'].hist(bins=balanced_train_df['ships'].max() + 1)
 print(balanced_train_df.shape[0], 'masks')
 
-
+# split data
 train_ids, valid_ids = train_test_split(balanced_train_df,
                                         test_size=0.2,
                                         stratify=balanced_train_df['ships'])
@@ -224,9 +161,6 @@ valid_df = pd.merge(masks, valid_ids)
 print(train_df.shape[0], 'training masks')
 print(valid_df.shape[0], 'validation masks')
 
-
-# ref: https://www.kaggle.com/paulorzp/run-length-encode-and-decode
-# no_mask = np.zeros(image_shape[0] * image_shape[1], dtype=np.uint8)
 
 # Model interface
 inputs = Input((TARGET_WIDTH, TARGET_HEIGHT, IMG_CHANNELS))

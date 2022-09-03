@@ -1,3 +1,4 @@
 data/
 model.h5
 README.md
+__pycache__/
