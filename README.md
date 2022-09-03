@@ -16,7 +16,11 @@
 |
 ├───winstars-model-inference.py         <- Model inference
 |
-├───winstars-model-tr.py                <- Model training 
+├───winstars-model-tr.py                <- Model training
+|
+├───constants.py                        <- Constant variables
+|
+├───utils.py                            <- Useful and repeated func
 |
 ├───.gitignore                          <- Ignore files
 |
@@ -49,17 +53,17 @@ Model evaluate -
 
 Picture from my code:
 
-If I would to compare original images with prediction, sometimes I had wrong results, model working very bad...(it'll be fixed) My classificator can't distinguish the sea and the shore. My model was undertrained.
+If I would to compare original images with prediction, sometimes I had wrong results, model working very bad...(it was fixed) My classificator can't distinguish the sea and the shore. My model was undertrained.
 
 ![bad](https://user-images.githubusercontent.com/83775762/188190635-4289599d-ef1a-44f9-bc61-2a93ab6851a4.png)
 
-After cahnge epoch (to 99) and training steps (to 50) my NN shows better result!
+After change epoch (to 99) and training steps (to 50) my NN shows better result!
 
 ![res_img](https://user-images.githubusercontent.com/83775762/188265259-f6b10136-6501-405b-9983-cf86414f1d5b.png)
 
 ![better_img](https://user-images.githubusercontent.com/83775762/188257206-b38ce394-d06d-4af9-9878-cb7165c7fbec.png)
 
-In the conclusion I made simple model witch try to predict ships (in some pics model work very well, shown above). Input image shape is 768, output - 128. (Want to remember, that dice coef=99%. It's very hight, and I don't confidence in 100% about this res...)
+In the conclusion I made simple model witch try to predict ships (in some pics model work very well, shown above. But the model has room for improvement). Input image shape is 768, output - 128. (Want to remember, that dice coef=99%. It's very hight, and I don't confidence in about this res...)
 
 Powerful resources that helped to cope with this task:
 
