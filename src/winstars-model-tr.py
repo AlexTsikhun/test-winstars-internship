@@ -14,6 +14,7 @@ import os
 import warnings
 import numpy as np
 import pandas as pd
+import argparse
 
 from skimage.io import imread
 import matplotlib.pyplot as plt
@@ -34,10 +35,6 @@ IMG_HEIGHT = 768
 IMG_CHANNELS = 3
 TARGET_WIDTH = 128
 TARGET_HEIGHT = 128
-batch_size = 32
-
-MAX_TRAIN_STEPS = 50
-MAX_TRAIN_EPOCHS = 99
 
 SAMPLES_PER_GROUP = 2000
 
@@ -110,11 +107,20 @@ def create_test_generator(precess_batch_size):
 
 ######
 
-
 def montage_rgb(x): return np.stack(
     [montage(x[:, :, :, i]) for i in range(x.shape[3])], -1)
 
 
+# ARGPARSER
+parser = argparse.ArgumentParser()
+parser.add_argument('-e', '--train_epoch', type=int, default=99)
+parser.add_argument('-s', '--train_steps', type=int, default=50)
+parser.add_argument('-bs', '--batch_size', type=int, default=32)
+
+args = parser.parse_args()
+
+
+# pathlib.Path(__file__).parents[1].joinpath(...) - back step  in my catalog
 df_sub = pd.read_csv(pathlib.Path(__file__).parents[1].joinpath(
     'data/airbus-ship-detection/sample_submission_v2.csv'))
 
@@ -271,8 +277,8 @@ model.compile(
 )
 
 
-train_generator = create_image_generator(batch_size, train_df)
-validate_generator = create_image_generator(batch_size, valid_df)
+train_generator = create_image_generator(args.batch_size, train_df)
+validate_generator = create_image_generator(args.batch_size, valid_df)
 
 # # Train
 # Save best model at every epoch
@@ -286,8 +292,8 @@ checkpoint = ModelCheckpoint(
 )
 
 
-train_steps = min(MAX_TRAIN_STEPS, train_df.shape[0] // batch_size)
-validate_steps = min(MAX_TRAIN_STEPS, valid_df.shape[0] // batch_size)
+train_steps = min(args.train_steps, train_df.shape[0] // args.batch_size)
+validate_steps = min(args.train_steps, valid_df.shape[0] // args.batch_size)
 
 history = model.fit_generator(
     train_generator,
@@ -295,14 +301,14 @@ history = model.fit_generator(
     validation_data=validate_generator,
     callbacks=[checkpoint],
     validation_steps=validate_steps,
-    epochs=MAX_TRAIN_EPOCHS
+    epochs=args.train_epoch
 )
 
 
-test_generator = create_test_generator(batch_size)
+test_generator = create_test_generator(args.batch_size)
 
 # # Predict
-test_steps = np.ceil(float(df_sub.shape[0]) / float(batch_size)).astype(int)
+test_steps = np.ceil(float(df_sub.shape[0]) / float(args.batch_size)).astype(int)
 predict_mask = model.predict_generator(test_generator, steps=test_steps)
 
 
