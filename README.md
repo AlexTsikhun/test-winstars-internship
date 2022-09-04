@@ -63,6 +63,11 @@ After change epoch (to 99) and training steps (to 50) my NN shows better result!
 
 In the conclusion I made simple model witch try to predict ships (in some pics model work very well, shown above. But the model has room for improvement). Input image shape is 768, output - 128. (Want to remember, that dice coef=99%. It's very hight, and I don't confidence in about this res...)
 
+## Train model:
+```
+python winstars-model-tr.py --train_epoch 99 --train_steps 50 --batch_size 32
+```
+
 Powerful resources that helped to cope with this task:
 
 * https://www.kaggle.com/kmader/baseline-u-net-model-part-1
