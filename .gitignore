@@ -1,4 +1,6 @@
+myenv/
 data/
-model.h5
+
+models/
 README.md
-__pycache__/
+__pycache__
