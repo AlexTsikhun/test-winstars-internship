@@ -7,8 +7,8 @@ from matplotlib.cm import get_cmap
 
 from constants import IMG_WIDTH, IMG_HEIGHT, image_shape
 
-def plot_images(df_sub, predict_mask):
 
+def plot_images(df_sub, predict_mask):
     fig = plt.figure(figsize=(16, 8))
     for index, row in df_sub.head(20).iterrows():
         origin_image = imread(
@@ -17,7 +17,8 @@ def plot_images(df_sub, predict_mask):
             .joinpath(os.path.join("data/test_v2/"), row.ImageId)
         )
         predicted_image = (
-            resize(predict_mask[index], image_shape).reshape(IMG_WIDTH, IMG_HEIGHT) * 255
+            resize(predict_mask[index], image_shape).reshape(IMG_WIDTH, IMG_HEIGHT)
+            * 255
         )
         plt.subplot(10, 4, 2 * index + 1)
         plt.imshow(origin_image)
@@ -33,7 +34,9 @@ def plot_training_metrics(history):
         label="Val_dice_coef",
     )
     plt.plot(
-        range(history.epoch[-1] + 1), history.history["dice_coef"], label="Trn_dice_coef"
+        range(history.epoch[-1] + 1),
+        history.history["dice_coef"],
+        label="Trn_dice_coef",
     )
     plt.title("DICE")
     plt.xlabel("Epoch")

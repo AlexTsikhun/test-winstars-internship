@@ -1,57 +1,53 @@
 # test-winstars-internship
-## Test task based on [Airbus Ship Detection Challenge](https://www.kaggle.com/c/airbus-ship-detection)
+## Test task from R&D Center WINSTARS.AI based on [Airbus Ship Detection Challenge](https://www.kaggle.com/c/airbus-ship-detection)
 ![img_ship](https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSoknUBpPgSqMCwahq_I8rKBAO88uhg4yvIXw&usqp=CAU)
 ---
 ## Project Structure:
 ```
-├── LICENSE
 ├───README.md                           <- The top-level README for developers using this project
 |
-├───eda                                 <- Eda
+├───notebooks                           <- Eda
+│   ├───winstars_model_inference.ipynb  <- Model inference results
+│   ├───winstars_model_train.ipynb      <- Training notebook
 │   └───eda_airbus.ipynb                <- Eda notebook
 |
-├───train-infer                         <- Contain kaggle notebooks with training and inferencing
-│   ├───winstars_model_inference.ipynb  <- Model inference results
-│   ├───winstars_model_train.ipynb      <- Model training results
-|
 ├───src                                 <- Code
-|   ├───winstars-model-inference.py     <- Model inference
-|   ├───winstars-model-tr.py            <- Model training
-|   ├───constants.py                    <- Constant variables
-|   ├───utils.py                        <- Useful and repeated func
+|   ├───constants.py     
+|   ├───inference.py                    <- Model inference
+|   ├───model.py                        <- Model training
+|   ├───preprocessing.py                <- Constant variables
+|   ├───train.py                        <- Useful and repeated func
+|   ├───utils.py                        <- Constant variables
+|   └───visualization.py                <- Plotting results
 |
 ├───.gitignore                          <- Ignore files
 |
-└───requirements.txt                    <- The requirements file for reproducing the analysis environment, e.g.
-                                           generated with `pip freeze > requirements.txt`
+└───requirements.txt                    <- The requirements file for reproducing the analysis environment, e.g. generated with `pip freeze > requirements.txt`
 ```
 ## Solution
 
-
-<!-- In next step I used:
-```python 
-$ jupyter nbconvert --to script [YOUR_NOTEBOOK].ipynb
-```
-for convert .ipynb to .py. -->
-In my work I have shown that I am familiar with CNN and related topics. For better result can be used augmentation techniques, deeper NN and tuning hyperparameters - it takes a little more time.
-### Setup
-Features in the data - class imbalance.
-
+Through my work, I have demonstrated my familiarity with CNN and its associated subjects.
+### Project setup
+*Problem Definition:* detect ships on sateline images and  put an aligned bounding box segment around the ships, dataset is highly imbalanced. Ships within and across images may differ in size (sometimes significantly) and be located in open sea, at docks, marinas, etc.
 
 ![disb](https://user-images.githubusercontent.com/83775762/187706461-04ffb675-6475-48c7-a8ef-60fb7cc71838.png)
 
-Many photos have duplicates - for better berfomance they can be deleted. Data was split with proportion 80/20 (train/validate)
-Unet architecture was chosen - because she is well suited for segmentation tasks.
-Model was trained on 10 epoch with batch_size=32, evaluation metric - dice score.
+*Data Collection and Annotation:* data provided by Airbus, you can download them [here](https://www.kaggle.com/competitions/airbus-ship-detection/overview). Many photos have duplicates - they have been removed for better performance.
+
+*Data Preprocessing:* function `preprocess_data()` identifies and counts the non-empty masks, filters out empty images, calculates the file size of each image, and adds columns indicating the presence of ships and the file size. It then balances the dataset by randomly sampling a fixed number of images for each ship count. The function returns a DataFrame with the balanced samples and provides information about the number of masks in the final dataset.
+
+*Model Selection:* between writing your own model and using a pretrained one was chosen to use pretrained model (Transfer Learning approach).
+
+*Model Architecture:* U-net - very suitable for image segmantation tasks. `sm.Unet` imported from `segmentation_models`, backbone architecture is ResNet-34, pre-trained weights from the ImageNet datase. The activation function used in the final layer is the sigmoid activation. Input image shape is 768, output - 128.
+
+*Model Training:* the model is compiled using the Adam  and Jaccard loss, Dice loss - for evaluating the model's performance during training.
+Generators (`create_image_generator`) provide batches of images and corresponding segmentation masks during training. Two callbacks are defined: `ModelCheckpoint` saves the model weights whenever there is an improvement in the validation loss; `EarlyStopping` callback stops the training process if there is no improvement in the validation loss for 5 epochs. 10 epoch with 1106 steps.
+
+*Model Evaluation:* eavluated on test data with Dice coefficient.
+
 ![dice](https://user-images.githubusercontent.com/83775762/187643841-efde5d72-aa04-45ae-8b5e-3818a90e1f29.png)
-Model evaluate - 
-![dice1000](https://user-images.githubusercontent.com/83775762/187703653-dda21eab-55cf-44a5-907d-9dfbb0c9399a.png)
 
-#### Inference
-
-Picture from my code:
-
-If I would to compare original images with prediction, sometimes I had wrong results, model working very bad...(it was fixed) My classificator can't distinguish the sea and the shore. My model was undertrained.
+*Results:* in the conclusion I made simple model witch try to predict ships (in some pics model work very well, shown above. But the model has room for improvement). (Want to remember, that dice coef=99%. It's very hight, and I don't confidence in about this res...).
 
 ![bad](https://user-images.githubusercontent.com/83775762/188190635-4289599d-ef1a-44f9-bc61-2a93ab6851a4.png)
 
@@ -61,25 +57,16 @@ After change epoch (to 99) and training steps (to 50) my NN shows better result!
 
 ![better_img](https://user-images.githubusercontent.com/83775762/188257206-b38ce394-d06d-4af9-9878-cb7165c7fbec.png)
 
-In the conclusion I made simple model witch try to predict ships (in some pics model work very well, shown above. But the model has room for improvement). Input image shape is 768, output - 128. (Want to remember, that dice coef=99%. It's very hight, and I don't confidence in about this res...)
+*Future Work:* enter data augmentation (increase diversity of dataset), modification of the architecture, hyperparameter tuning or ensemble techniques (was planned to implement classification model (to classify if there is a ship in the image (CNN)) with segmentation model (to segmentate area around ship (U-Net))).
 
-## Train model:
+## Usage
+### Train model:
 ```
-python winstars-model-tr.py --train_epoch 99 --train_steps 50 --batch_size 32
+cd src
+py train.py --train_epoch 99 --train_steps 50 --batch_size 32
 ```
-
-Powerful resources that helped to cope with this task:
-
-* https://www.kaggle.com/kmader/baseline-u-net-model-part-1
-* https://www.kaggle.com/code/hmendonca/u-net-model-with-submission
-* https://www.kaggle.com/code/ammarnassanalhajali/sartorius-segmentation-keras-u-net-inference/notebook
-* https://www.kaggle.com/code/kmader/baseline-u-net-model-part-1/notebook#Run-the-test-data
-* https://www.kaggle.com/code/ammarnassanalhajali/sartorius-segmentation-keras-u-net-inference#Prediction
----
-## License
-
-Distributed under the MIT License. See LICENSE.txt for more information.
-
-## Acknowledgments
-
-First of all thank you Kaggle for competition and data. Thank you very much to the company [Winstars](https://www.winstars.tech/) than gave such interesting test task. Thanks to the recruiter, who helped me when something was unclear.
+### Inference model:
+```
+cd src
+py inference.py
+```

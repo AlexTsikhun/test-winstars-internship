@@ -18,13 +18,16 @@ import gc
 
 gc.enable()  # memory is tight
 
-from constants import train_image_dir, test_image_dir, masks, IMG_SIZE, SAMPLES_PER_GROUP
-from utils import (
-    dice_coef,
-    multi_rle_encode,
-    masks_as_color
+from constants import (
+    train_image_dir,
+    test_image_dir,
+    masks,
+    IMG_SIZE,
+    SAMPLES_PER_GROUP,
 )
+from utils import dice_coef, multi_rle_encode, masks_as_color
 from preprocessing import preprocess_data
+
 
 def raw_prediction(img, path=test_image_dir):
     c_img = imread(os.path.join(path, c_img_name))
@@ -54,6 +57,7 @@ model = load_model(MODEL_PATH, custom_objects={"dice_coef": dice_coef})
 
 # compare 4 img
 samples = valid_df.groupby("ships").apply(lambda x: x.sample(1))
+
 fig, m_axs = plt.subplots(4, 4, figsize=(30, 30))
 [c_ax.axis("off") for c_ax in m_axs.flatten()]
 

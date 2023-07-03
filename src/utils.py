@@ -4,8 +4,6 @@ import numpy as np
 import pandas as pd
 from constants import image_shape
 
-# from winstars-model-tr import image_shape
-
 
 def dice_coef(y_true, y_pred, smooth=1):
     """
@@ -25,6 +23,7 @@ def dice_coef(y_true, y_pred, smooth=1):
     dice_coef = numerator / denominator
     return dice_coef
 
+
 def multi_rle_encode(img, **kwargs):
     """
     Encode connected regions as separated masks
@@ -42,6 +41,7 @@ def multi_rle_encode(img, **kwargs):
             rle_encode(labels == k, **kwargs) for k in np.unique(labels[labels > 0])
         ]
 
+
 def rle_encode(img, min_max_threshold=1e-3, max_mean_threshold=None):
     """
     img: numpy array, 1 - mask, 0 - background
@@ -58,6 +58,7 @@ def rle_encode(img, min_max_threshold=1e-3, max_mean_threshold=None):
     runs = np.where(pixels[1:] != pixels[:-1])[0] + 1
     runs[1::2] -= runs[::2]
     return " ".join(str(x) for x in runs)
+
 
 # ref: https://www.kaggle.com/paulorzp/run-length-encode-and-decode
 def rle_decode(mask_rle, shape=image_shape):
@@ -79,6 +80,7 @@ def rle_decode(mask_rle, shape=image_shape):
         img[lo:hi] = 1
     return img.reshape(shape).T
 
+
 def masks_as_image(in_mask_list):
     # Take the individual ship masks and create a single mask array for all
     # ships
@@ -87,6 +89,7 @@ def masks_as_image(in_mask_list):
         if isinstance(mask, str):
             all_masks |= rle_decode(mask)
     return all_masks
+
 
 def masks_as_color(in_mask_list):
     # Take the individual ship masks and create a color mask array for each
@@ -102,5 +105,6 @@ def masks_as_color(in_mask_list):
         if isinstance(mask, str):
             all_masks[:, :] += scale(i) * rle_decode(mask)
     return all_masks
+
 
 no_mask = np.zeros(image_shape[0] * image_shape[1], dtype=np.uint8)
