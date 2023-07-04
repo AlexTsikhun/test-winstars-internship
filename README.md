@@ -30,7 +30,7 @@ Through my work, I have demonstrated my familiarity with CNN and its associated 
 ### Project setup
 *Problem Definition:* detect ships on sateline images and  put an aligned bounding box segment around the ships, dataset is highly imbalanced. Ships within and across images may differ in size (sometimes significantly) and be located in open sea, at docks, marinas, etc.
 
-![disb](https://user-images.githubusercontent.com/83775762/187706461-04ffb675-6475-48c7-a8ef-60fb7cc71838.png)
+![image](https://github.com/AlexTsikhun/test-winstars-internship/assets/83775762/2613fa72-2100-4283-a322-367e5760c1a5)
 
 *Data Collection and Annotation:* data provided by Airbus, you can download them [here](https://www.kaggle.com/competitions/airbus-ship-detection/overview). Many photos have duplicates - they have been removed for better performance.
 
@@ -42,16 +42,14 @@ Through my work, I have demonstrated my familiarity with CNN and its associated 
 
 *Model Training:* the model is compiled using the Adam  and Jaccard loss, Dice loss - for evaluating the model's performance during training.
 Generators (`create_image_generator`) provide batches of images and corresponding segmentation masks during training. Two callbacks are defined: `ModelCheckpoint` saves the model weights whenever there is an improvement in the validation loss; `EarlyStopping` callback stops the training process if there is no improvement in the validation loss for 5 epochs. 10 epoch with 1106 steps.
-
+## All plots below is deprecated, becouse new model still learning
 *Model Evaluation:* eavluated on test data with Dice coefficient.
 
 ![dice](https://user-images.githubusercontent.com/83775762/187643841-efde5d72-aa04-45ae-8b5e-3818a90e1f29.png)
 
-*Results:* in the conclusion I made simple model witch try to predict ships (in some pics model work very well, shown above. But the model has room for improvement). (Want to remember, that dice coef=99%. It's very hight, and I don't confidence in about this res...).
+*Results:* after a long wait I applied pretrained U-Net model witch to predict ships Metrics - loss: 0.9993 - dice_coef: 1.0000.
 
 ![bad](https://user-images.githubusercontent.com/83775762/188190635-4289599d-ef1a-44f9-bc61-2a93ab6851a4.png)
-
-After change epoch (to 99) and training steps (to 50) my NN shows better result! (but it took 9 hours...)
 
 ![res_img](https://user-images.githubusercontent.com/83775762/188265259-f6b10136-6501-405b-9983-cf86414f1d5b.png)
 
