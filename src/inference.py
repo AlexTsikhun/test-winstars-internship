@@ -54,8 +54,13 @@ valid_df = pd.merge(masks, valid_ids)
 print(train_df.shape[0], "training masks")
 print(valid_df.shape[0], "validation masks")
 
-model = load_model(MODEL_PATH, custom_objects={"dice_coef": dice_coef,
-                                               "binary_crossentropy_plus_jaccard_loss": sm.losses.bce_jaccard_loss})
+model = load_model(
+    MODEL_PATH,
+    custom_objects={
+        "dice_coef": dice_coef,
+        "binary_crossentropy_plus_jaccard_loss": sm.losses.bce_jaccard_loss,
+    },
+)
 
 # compare 4 img
 samples = valid_df.groupby("ships").apply(lambda x: x.sample(1))

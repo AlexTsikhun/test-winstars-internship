@@ -42,17 +42,19 @@ Through my work, I have demonstrated my familiarity with CNN and its associated 
 
 *Model Training:* the model is compiled using the Adam  and Jaccard loss, Dice loss - for evaluating the model's performance during training.
 Generators (`create_image_generator`) provide batches of images and corresponding segmentation masks during training. Two callbacks are defined: `ModelCheckpoint` saves the model weights whenever there is an improvement in the validation loss; `EarlyStopping` callback stops the training process if there is no improvement in the validation loss for 5 epochs. 10 epoch with 1106 steps.
-## All plots below is deprecated, becouse new model still learning
-*Model Evaluation:* eavluated on test data with Dice coefficient.
+
+*Model Evaluation:* eavluated on test data with Dice coefficient. (plot below is deprecated)
 
 ![dice](https://user-images.githubusercontent.com/83775762/187643841-efde5d72-aa04-45ae-8b5e-3818a90e1f29.png)
 
 *Results:* after a long wait I applied pretrained U-Net model witch to predict ships Metrics - loss: 0.9993 - dice_coef: 1.0000. Model is able to recognize position where is ship, but can't segment area around him. 
 
 Model try to segment ships:
+
 ![res_img](https://user-images.githubusercontent.com/83775762/188265259-f6b10136-6501-405b-9983-cf86414f1d5b.png)
 
 Worse result:
+
 ![Alt text](image.png)
 
 *Future Work:* enter data augmentation (increase diversity of dataset), modification of the architecture, hyperparameter tuning or ensemble techniques (was planned to implement classification model (to classify if there is a ship in the image (CNN)) with segmentation model (to segmentate area around ship (U-Net))).
