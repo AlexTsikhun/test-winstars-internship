@@ -55,7 +55,7 @@ Model try to segment ships:
 
 Worse result:
 
-![Alt text](image.png)
+![image](https://github.com/AlexTsikhun/test-winstars-internship/assets/83775762/4b3c6be6-1ca7-4a64-a5be-6a6bd22e7c56)
 
 *Future Work:* enter data augmentation (increase diversity of dataset), modification of the architecture, hyperparameter tuning or ensemble techniques (was planned to implement classification model (to classify if there is a ship in the image (CNN)) with segmentation model (to segmentate area around ship (U-Net))).
 
