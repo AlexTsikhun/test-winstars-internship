@@ -2,5 +2,5 @@ myenv/
 data/
 
 models/
-README.md
+*.png
 __pycache__
