@@ -49,9 +49,7 @@ Generators (`create_image_generator`) provide batches of images and correspondin
 
 *Results:* in the conclusion I made simple model witch try to predict ships (in some pics model work very well, shown above. But the model has room for improvement). (Want to remember, that dice coef=99%. It's very hight, and I don't confidence in about this res...).
 
-![bad](https://user-images.githubusercontent.com/83775762/188190635-4289599d-ef1a-44f9-bc61-2a93ab6851a4.png)
-
-After change epoch (to 99) and training steps (to 50) my NN shows better result! (but it took 9 hours...)
+![Alt text](image.png)
 
 ![res_img](https://user-images.githubusercontent.com/83775762/188265259-f6b10136-6501-405b-9983-cf86414f1d5b.png)
 
